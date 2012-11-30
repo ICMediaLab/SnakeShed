@@ -19,17 +19,19 @@ namespace SnakeShed
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
         // Set initial value for speed.
-        Vector2[] spriteSpeed = new Vector2[10];
+        Vector2[] spriteSpeed;
         // This is a texture we can render.
         Texture2D headTexture;
         Texture2D bodyTexture;
         Texture2D pelletTexture;
+        Texture2D deadTexture;
         // Set the coordinates to draw the sprite at.
-        Vector2[] arrayVector = new Vector2[10];
-        Vector2[,] headSpeeds = new Vector2[10,10];
-        Vector2[,] turnPoints = new Vector2[10,10];
+        Vector2[] arrayVector;
+        Vector2[,] headSpeeds;
+        Vector2[,] turnPoints;
+        List<Vector2> tails;
         int seg; //number of segments initialised
-        int[] count = new int[10]; //number of turns saved
+        int[] count; //number of turns saved
         Vector2 pelletPos;
         //font
         Vector2 FontPosition;
@@ -40,6 +42,7 @@ namespace SnakeShed
         KeyboardState oldState;
         float rotationAngle;
         Vector2 origin;
+        bool gameOver;
 
         public Game1()
         {
@@ -55,6 +58,16 @@ namespace SnakeShed
         /// </summary>
         protected override void Initialize()
         {
+            //reset or load gamestate
+            spriteSpeed = new Vector2[10];
+            arrayVector = new Vector2[10];
+            headSpeeds = new Vector2[10, 10];
+            turnPoints = new Vector2[10, 10];
+            tails = new List<Vector2>();
+            count = new int[10];
+            rotationAngle = 0.0f;
+            gameOver = false;
+
             spriteSpeed[0] = new Vector2(-1,0);
             Vector2 FontPosition = Vector2.Zero;
             time = 0.0d;
@@ -92,14 +105,12 @@ namespace SnakeShed
             headTexture = Content.Load<Texture2D>("SnakeHead");
             bodyTexture = Content.Load<Texture2D>("SnakeBody");
             pelletTexture = Content.Load<Texture2D>("Pellet");
+            deadTexture = Content.Load<Texture2D>("SnakeDead");
 
             //font
-            Font1 = Content.Load<SpriteFont>("SpriteFont1");
-
-            // TODO: Load your game content here            
+            Font1 = Content.Load<SpriteFont>("SpriteFont1");         
             FontPosition = new Vector2(graphics.GraphicsDevice.Viewport.Width / 2,
                 graphics.GraphicsDevice.Viewport.Height / 2);
-
         }
 
         /// <summary>
@@ -124,7 +135,7 @@ namespace SnakeShed
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 this.Exit();
 
-
+            //spawn a pellet if off screen
             if (pelletPos == new Vector2(900, 700))
             {
                 System.Random RandNum = new System.Random();
@@ -133,29 +144,60 @@ namespace SnakeShed
                 pelletPos = new Vector2(x, y);
             }
 
+            //checks if snake has hit a pellet
             if (approxEquals(arrayVector[0], pelletPos))
             {
                 score += 1;
                 pelletPos = new Vector2(900, 700);
-                if (seg < 9)
+                //if it is less than length ten, lengthen tail
+                if (seg < 10)
                 {
                     arrayVector[seg] = (-spriteSpeed[seg - 1] * new Vector2(32, 32)) + arrayVector[seg - 1];
                     spriteSpeed[seg] = spriteSpeed[seg - 1];
                     for (int j = 0; j < 10; j++)
                     {
-                        turnPoints[seg,j] = turnPoints[(seg - 1),j];
+                        turnPoints[seg, j] = turnPoints[(seg - 1), j];
                         headSpeeds[seg, j] = headSpeeds[(seg - 1), j];
                     }
                     count[seg] = count[seg - 1];
 
                     seg += 1;
-                }  
+                }
+                //otherwise make tail dead
+                else
+                {
+                    var tail = new List<Vector2>(arrayVector);
+                    tail.RemoveAt(0);
+                    tails.AddRange(tail);
+                    seg = 1;
+                    for (int i = 1; i < 10; i++)
+                    {
+                        arrayVector[i] = new Vector2(900, 700);
+                    }
+                    Array.Clear(turnPoints, 0, 100);
+                    Array.Clear(headSpeeds, 0, 100);
+                    Array.Clear(spriteSpeed, 1, 9);
+                    Array.Clear(count, 0, 10);
+                }
+            }
+
+            //checks if snake has collided with dead skins or its tail
+            var tale = new List<Vector2>(arrayVector);
+            tale.RemoveAt(0);
+            tale.RemoveAt(0);
+            var coll = tale.Union(tails).ToList();
+            foreach (Vector2 collision in coll)
+            {
+                if (approxEquals(arrayVector[0], collision))
+                {
+                    Array.Clear(spriteSpeed, 0, 10);
+                    gameOver = true;
+                }
             }
 
             this.UpdateInput();
             this.UpdateSprite(gameTime);
             
-
             base.Update(gameTime);
         }
 
@@ -194,6 +236,7 @@ namespace SnakeShed
                     arrayVector[i].Y = MaxY;
                 }
 
+                //when not looping on head
                 if (i != 0)
                 {
                     if (arrayVector[i] == turnPoints[i,0])
@@ -203,19 +246,19 @@ namespace SnakeShed
                             {
                                 if (j == (count[i] - 1))
                                 {
-                                    headSpeeds[i,j] = new Vector2(0, 0);
+                                    headSpeeds[i,j] = new Vector2(0, 0); //reset headspeed and turnpoints at end of list to 0
                                     turnPoints[i,j] = new Vector2(0, 0);
                                 }
                                 else
                                 {
-                                    headSpeeds[i,j] = headSpeeds[i,j + 1];
+                                    headSpeeds[i,j] = headSpeeds[i,j + 1]; //shuffle other headspeed and turnpoints up one
                                     turnPoints[i,j] = turnPoints[i,j + 1];
                                 }
                                  
                             }
                             count[i] -= 1; 
                         }
-                    arrayVector[i] += spriteSpeed[i] * 2;
+                    arrayVector[i] += spriteSpeed[i] * 2; //move rest of body
                 }
 
             }
@@ -226,77 +269,86 @@ namespace SnakeShed
         private void UpdateInput()
         {
             KeyboardState newState = Keyboard.GetState();
+            if (!gameOver)
+            {
+                // Is the Up key down?
+                if (newState.IsKeyDown(Keys.Up))
+                {
+                    // If not down last update, key has just been pressed.
+                    if (!oldState.IsKeyDown(Keys.Up) && spriteSpeed[0] != new Vector2(0, 1))
+                    {
+                        spriteSpeed[0] = new Vector2(0, -1);
+                        if (score % 10 != 0)
+                        {
+                            for (int i = 1; i < seg; i++)
+                            {
+                                turnPoints[i, count[i]] = arrayVector[0];
+                                headSpeeds[i, count[i]] = spriteSpeed[0];
+                                count[i] += 1;
+                            }
+                        }
+                        rotationAngle = (float)(Math.PI / 2);
 
-            // Is the Up key down?
-            if (newState.IsKeyDown(Keys.Up))
-            {
-                // If not down last update, key has just been pressed.
-                if (!oldState.IsKeyDown(Keys.Up) && spriteSpeed[0] != new Vector2(0, 1))
-                {
-                    spriteSpeed[0] = new Vector2(0, -1);
-                    if (score % 10 != 0)
-                    {
-                        for (int i = 1; i < seg; i++)
-                        {
-                            turnPoints[i, count[i]] = arrayVector[0];
-                            headSpeeds[i, count[i]] = spriteSpeed[0];
-                            count[i] += 1;
-                        }
                     }
-                    rotationAngle = (float)(Math.PI / 2);
-                    
                 }
-            }
-            else if (newState.IsKeyDown(Keys.Down))
-            {
-                if (!oldState.IsKeyDown(Keys.Down) && spriteSpeed[0] != new Vector2(0, -1))
+                else if (newState.IsKeyDown(Keys.Down))
                 {
-                    spriteSpeed[0] = new Vector2(0, 1);
-                    if (score % 10 != 0)
+                    if (!oldState.IsKeyDown(Keys.Down) && spriteSpeed[0] != new Vector2(0, -1))
                     {
-                        for (int i = 1; i < seg; i++)
+                        spriteSpeed[0] = new Vector2(0, 1);
+                        if (score % 10 != 0)
                         {
-                            turnPoints[i, count[i]] = arrayVector[0];
-                            headSpeeds[i, count[i]] = spriteSpeed[0];
-                            count[i] += 1;
+                            for (int i = 1; i < seg; i++)
+                            {
+                                turnPoints[i, count[i]] = arrayVector[0];
+                                headSpeeds[i, count[i]] = spriteSpeed[0];
+                                count[i] += 1;
+                            }
                         }
+                        rotationAngle = (float)((3 * Math.PI) / 2);
                     }
-                    rotationAngle = (float)((3 * Math.PI)/ 2);
                 }
-            }
-            else if (newState.IsKeyDown(Keys.Left))
-            {
-                if (!oldState.IsKeyDown(Keys.Left) && spriteSpeed[0] != new Vector2(1, 0))
+                else if (newState.IsKeyDown(Keys.Left))
                 {
-                    spriteSpeed[0] = new Vector2(-1, 0);
-                    if (score % 10 != 0)
+                    if (!oldState.IsKeyDown(Keys.Left) && spriteSpeed[0] != new Vector2(1, 0))
                     {
-                        for (int i = 1; i < seg; i++)
+                        spriteSpeed[0] = new Vector2(-1, 0);
+                        if (score % 10 != 0)
                         {
-                            turnPoints[i, count[i]] = arrayVector[0];
-                            headSpeeds[i, count[i]] = spriteSpeed[0];
-                            count[i] += 1;
+                            for (int i = 1; i < seg; i++)
+                            {
+                                turnPoints[i, count[i]] = arrayVector[0];
+                                headSpeeds[i, count[i]] = spriteSpeed[0];
+                                count[i] += 1;
+                            }
                         }
+                        rotationAngle = (float)(2 * Math.PI);
                     }
-                    rotationAngle = (float)(2*Math.PI);
                 }
-            }
-            else if (newState.IsKeyDown(Keys.Right))
-            {
-                if (!oldState.IsKeyDown(Keys.Right) && spriteSpeed[0] != new Vector2(-1, 0))
+                else if (newState.IsKeyDown(Keys.Right))
                 {
+                    if (!oldState.IsKeyDown(Keys.Right) && spriteSpeed[0] != new Vector2(-1, 0))
+                    {
 
-                    spriteSpeed[0] = new Vector2(1, 0);
-                    if (score % 10 != 0)
-                    {
-                        for (int i = 1; i < seg; i++)
+                        spriteSpeed[0] = new Vector2(1, 0);
+                        if (score % 10 != 0)
                         {
-                            turnPoints[i, count[i]] = arrayVector[0];
-                            headSpeeds[i, count[i]] = spriteSpeed[0];
-                            count[i] += 1;
+                            for (int i = 1; i < seg; i++)
+                            {
+                                turnPoints[i, count[i]] = arrayVector[0];
+                                headSpeeds[i, count[i]] = spriteSpeed[0];
+                                count[i] += 1;
+                            }
                         }
+                        rotationAngle = (float)(Math.PI);
                     }
-                    rotationAngle = (float)(Math.PI);
+                }
+            }
+            else
+            {
+                if (newState.IsKeyDown(Keys.Enter) && !oldState.IsKeyDown(Keys.Enter))
+                {
+                    this.Initialize();
                 }
             }
             // Update saved state.
@@ -319,7 +371,7 @@ namespace SnakeShed
             Int32 rem;
             Math.DivRem((int)time, 2, out rem);
 
-            // Draw the sprite.
+            // Draw the snake.
             spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.AlphaBlend);
             spriteBatch.Draw(headTexture, arrayVector[0], null, Color.White, rotationAngle, origin, 1.0f, SpriteEffects.None, 0.0f);
             for (int i = 1; i < 10; i++)
@@ -328,8 +380,23 @@ namespace SnakeShed
             }
             spriteBatch.Draw(pelletTexture, pelletPos, null, Color.White, 0.0f, origin, 1.0f, SpriteEffects.None, 0.0f);
 
-            // Draw time passed
-            string output = "Score: " + score.ToString(); //time.ToString();
+            //draw all dead tails
+            foreach (Vector2 pos in tails)
+            {
+                spriteBatch.Draw(deadTexture, pos, null, Color.White, 0.0f, origin, 1.0f, SpriteEffects.None, 0.0f);
+            }
+
+            // Draw score
+            string output;
+            if (gameOver)
+            {
+                output = "Game over! You scored: " + score.ToString();
+            }
+            else
+            {
+                output = "Score: " + score.ToString();
+            }
+            
             // Find the center of the string
             Vector2 FontOrigin = Font1.MeasureString(output) / 2;
             // Draw the string
