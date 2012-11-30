@@ -1,0 +1,24 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SnakeShed", "SnakeShed\SnakeShed\SnakeShed.csproj", "{DFE4FEF4-D94B-4350-A4F3-38FB3F59A773}"
+EndProject
+Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "SnakeShedContent", "SnakeShed\SnakeShedContent\SnakeShedContent.contentproj", "{1A6EFCE3-EF86-404D-8E53-59FF4C870DE2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DFE4FEF4-D94B-4350-A4F3-38FB3F59A773}.Debug|x86.ActiveCfg = Debug|x86
+		{DFE4FEF4-D94B-4350-A4F3-38FB3F59A773}.Debug|x86.Build.0 = Debug|x86
+		{DFE4FEF4-D94B-4350-A4F3-38FB3F59A773}.Release|x86.ActiveCfg = Release|x86
+		{DFE4FEF4-D94B-4350-A4F3-38FB3F59A773}.Release|x86.Build.0 = Release|x86
+		{1A6EFCE3-EF86-404D-8E53-59FF4C870DE2}.Debug|x86.ActiveCfg = Debug|x86
+		{1A6EFCE3-EF86-404D-8E53-59FF4C870DE2}.Release|x86.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
