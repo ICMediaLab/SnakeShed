@@ -43,6 +43,13 @@ namespace SnakeShed
         float rotationAngle;
         Vector2 origin;
         bool gameOver;
+        //sound
+        SoundEffect BGM;
+        SoundEffectInstance BGMI;
+        bool deadPlay;
+        SoundEffect EAT;
+        SoundEffect DIE;
+        SoundEffect SHED;
 
         public Game1()
         {
@@ -78,6 +85,16 @@ namespace SnakeShed
             origin.X = 16;
             pelletPos = new Vector2(900, 700);
 
+            //sound playing
+            BGM = Content.Load<SoundEffect>("Parity_Bit");
+            BGMI = BGM.CreateInstance();
+            BGMI.IsLooped = true;
+            BGMI.Play();
+            DIE = Content.Load<SoundEffect>("SnakeDie");
+            deadPlay = false;
+            EAT = Content.Load<SoundEffect>("SnakeEat");
+            SHED = Content.Load<SoundEffect>("SnakeShed");
+
             //move all the body parts off screen at start
             for (int i = 0; i < 10; i++)
             {
@@ -111,6 +128,7 @@ namespace SnakeShed
             Font1 = Content.Load<SpriteFont>("SpriteFont1");         
             FontPosition = new Vector2(graphics.GraphicsDevice.Viewport.Width / 2,
                 graphics.GraphicsDevice.Viewport.Height / 2);
+
         }
 
         /// <summary>
@@ -138,10 +156,25 @@ namespace SnakeShed
             //spawn a pellet if off screen
             if (pelletPos == new Vector2(900, 700))
             {
-                System.Random RandNum = new System.Random();
-                int x = RandNum.Next(64, 736);
-                int y = RandNum.Next(64, 336);
-                pelletPos = new Vector2(x, y);
+                bool shedCollision = true;
+                //while loop to make sure new pellets aren't inside shed skins
+                while ((pelletPos == new Vector2(900, 700)) || shedCollision)
+                {
+                    shedCollision = false;
+                    System.Random RandNum = new System.Random();
+                    int x = RandNum.Next(64, 736);
+                    int y = RandNum.Next(64, 336);
+                    pelletPos = new Vector2(x, y);
+                    List<Vector2> body = new List<Vector2>(arrayVector);
+                    var combined = body.Union(tails).ToList();
+                    foreach (Vector2 elem in combined) 
+                    {
+                        if (approxEquals(pelletPos, elem))
+                        {
+                            shedCollision = true;
+                        }
+                    }
+                }
             }
 
             //checks if snake has hit a pellet
@@ -162,6 +195,7 @@ namespace SnakeShed
                     count[seg] = count[seg - 1];
 
                     seg += 1;
+                    EAT.Play();
                 }
                 //otherwise make tail dead
                 else
@@ -174,10 +208,15 @@ namespace SnakeShed
                     {
                         arrayVector[i] = new Vector2(900, 700);
                     }
+                    while (approxEquals(arrayVector[0], tails[tails.Count - 9]))
+                    {
+                        arrayVector[0] += spriteSpeed[0] * 2;
+                    }
                     Array.Clear(turnPoints, 0, 100);
                     Array.Clear(headSpeeds, 0, 100);
                     Array.Clear(spriteSpeed, 1, 9);
                     Array.Clear(count, 0, 10);
+                    SHED.Play();
                 }
             }
 
@@ -192,6 +231,12 @@ namespace SnakeShed
                 {
                     Array.Clear(spriteSpeed, 0, 10);
                     gameOver = true;
+                    if (!deadPlay)
+                    {
+                        BGMI.Stop();
+                        DIE.Play();
+                        deadPlay = true;
+                    }
                 }
             }
 
