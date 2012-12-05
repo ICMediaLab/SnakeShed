@@ -44,8 +44,6 @@ namespace SnakeShed
         Vector2 origin;
         bool gameOver;
         //sound
-        SoundEffect BGM;
-        SoundEffectInstance BGMI;
         bool deadPlay;
         SoundEffect EAT;
         SoundEffect DIE;
@@ -86,10 +84,6 @@ namespace SnakeShed
             pelletPos = new Vector2(900, 700);
 
             //sound playing
-            BGM = Content.Load<SoundEffect>("Parity_Bit");
-            BGMI = BGM.CreateInstance();
-            BGMI.IsLooped = true;
-            BGMI.Play();
             DIE = Content.Load<SoundEffect>("SnakeDie");
             deadPlay = false;
             EAT = Content.Load<SoundEffect>("SnakeEat");
@@ -233,7 +227,6 @@ namespace SnakeShed
                     gameOver = true;
                     if (!deadPlay)
                     {
-                        BGMI.Stop();
                         DIE.Play();
                         deadPlay = true;
                     }
