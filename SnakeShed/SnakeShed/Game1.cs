@@ -128,8 +128,8 @@ namespace SnakeShed
 
             //font
             Font1 = Content.Load<SpriteFont>("SpriteFont1");         
-            FontPosition = new Vector2(graphics.GraphicsDevice.Viewport.Width / 2,
-                graphics.GraphicsDevice.Viewport.Height / 2);
+            FontPosition = new Vector2(graphics.GraphicsDevice.Viewport.Width - 160,
+                graphics.GraphicsDevice.Viewport.Height - 30);
 
         }
 
@@ -482,8 +482,25 @@ namespace SnakeShed
             Int32 rem;
             Math.DivRem((int)time, 2, out rem);
 
-            // Draw the snake.
             spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.AlphaBlend);
+
+            // Draw score
+            string output;
+            if (gameOver)
+            {
+                output = "Game over! You scored: " + score.ToString();
+            }
+            else
+            {
+                output = "Score: " + score.ToString();
+            }
+            // Find the center of the string
+            Vector2 FontOrigin = Font1.MeasureString(output) / 2;
+            // Draw the string
+            spriteBatch.DrawString(Font1, output, FontPosition, Color.LightGreen,
+                0, FontOrigin, 1.0f, SpriteEffects.None, 0.5f);
+
+            // Draw the snake.
             spriteBatch.Draw(headTexture, arrayVector[0], null, Color.White, rotationAngle, origin, 1.0f, SpriteEffects.None, 0.0f);
             for (int i = 1; i < 10; i++)
             {
@@ -504,23 +521,6 @@ namespace SnakeShed
             {
                 spriteBatch.Draw(heartTexture, new Vector2(32 + (48 * i), 452), null, Color.White, 0.0f, origin, 1.0f, SpriteEffects.None, 0.0f);
             }
-
-            // Draw score
-            string output;
-            if (gameOver)
-            {
-                output = "Game over! You scored: " + score.ToString();
-            }
-            else
-            {
-                output = "Score: " + score.ToString();
-            }
-            
-            // Find the center of the string
-            Vector2 FontOrigin = Font1.MeasureString(output) / 2;
-            // Draw the string
-            spriteBatch.DrawString(Font1, output, FontPosition, Color.LightGreen,
-                0, FontOrigin, 1.0f, SpriteEffects.None, 0.5f);
 
             spriteBatch.End();
 
