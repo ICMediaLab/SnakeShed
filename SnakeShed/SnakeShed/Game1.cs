@@ -30,9 +30,10 @@ namespace SnakeShed
         Vector2[,] headSpeeds;
         Vector2[,] turnPoints;
         List<Vector2> tails;
+        List<Vector2> pellets;
         int seg; //number of segments initialised
         int[] count; //number of turns saved
-        Vector2 pelletPos;
+        //Vector2 pelletPos;
         //font
         Vector2 FontPosition;
         SpriteFont Font1;
@@ -43,6 +44,7 @@ namespace SnakeShed
         float rotationAngle;
         Vector2 origin;
         bool gameOver;
+        int lives;
         //sound
         bool deadPlay;
         SoundEffect EAT;
@@ -72,6 +74,7 @@ namespace SnakeShed
             count = new int[10];
             rotationAngle = 0.0f;
             gameOver = false;
+            lives = 3;
 
             spriteSpeed[0] = new Vector2(-1,0);
             Vector2 FontPosition = Vector2.Zero;
@@ -81,7 +84,8 @@ namespace SnakeShed
             oldState = Keyboard.GetState();
             origin.Y = 16;
             origin.X = 16;
-            pelletPos = new Vector2(900, 700);
+            pellets = new List<Vector2>();
+            pellets.Add(new Vector2(900, 700));
 
             //sound playing
             DIE = Content.Load<SoundEffect>("SnakeDie");
@@ -147,70 +151,80 @@ namespace SnakeShed
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 this.Exit();
 
-            //spawn a pellet if off screen
-            if (pelletPos == new Vector2(900, 700))
+            for (int i = 0; i < pellets.Count; i++)
             {
-                bool shedCollision = true;
-                //while loop to make sure new pellets aren't inside shed skins
-                while ((pelletPos == new Vector2(900, 700)) || shedCollision)
+                //spawn a pellet if off screen
+                if (pellets[i] == new Vector2(900, 700))
                 {
-                    shedCollision = false;
-                    System.Random RandNum = new System.Random();
-                    int x = RandNum.Next(64, 736);
-                    int y = RandNum.Next(64, 336);
-                    pelletPos = new Vector2(x, y);
-                    List<Vector2> body = new List<Vector2>(arrayVector);
-                    var combined = body.Union(tails).ToList();
-                    foreach (Vector2 elem in combined) 
+                    bool shedCollision = true;
+                    //while loop to make sure new pellets aren't inside shed skins
+                    while ((pellets[i] == new Vector2(900, 700)) || shedCollision)
                     {
-                        if (approxEquals(pelletPos, elem))
+                        shedCollision = false;
+                        System.Random RandNum = new System.Random();
+                        int x = 768;
+                        int y = RandNum.Next(64, 436);
+                        List<Vector2> body = new List<Vector2>(arrayVector);
+                        var combined = body.Union(tails).Union(pellets).ToList();
+                        pellets[i] = new Vector2(x, y);
+                        foreach (Vector2 elem in combined)
                         {
-                            shedCollision = true;
+                            if (approxEquals(pellets[i], elem))
+                            {
+                                shedCollision = true;
+                            }
                         }
                     }
                 }
-            }
-
-            //checks if snake has hit a pellet
-            if (approxEquals(arrayVector[0], pelletPos))
-            {
-                score += 1;
-                pelletPos = new Vector2(900, 700);
-                //if it is less than length ten, lengthen tail
-                if (seg < 10)
+            
+                //checks if snake has hit a pellet
+                if (approxEquals(arrayVector[0], pellets[i]))
                 {
-                    arrayVector[seg] = (-spriteSpeed[seg - 1] * new Vector2(32, 32)) + arrayVector[seg - 1];
-                    spriteSpeed[seg] = spriteSpeed[seg - 1];
-                    for (int j = 0; j < 10; j++)
+                    score += 1;
+                    pellets[i] = new Vector2(900, 700);
+                    for (int k = 0; k < (score / 5); k++)
                     {
-                        turnPoints[seg, j] = turnPoints[(seg - 1), j];
-                        headSpeeds[seg, j] = headSpeeds[(seg - 1), j];
+                        if (pellets.Count < (score / 5) + 1)
+                        {
+                            pellets.Add(new Vector2(900, 700));
+                        }
                     }
-                    count[seg] = count[seg - 1];
+                    //if it is less than length ten, lengthen tail
+                    if (seg < 10)
+                    {
+                        arrayVector[seg] = (-spriteSpeed[seg - 1] * new Vector2(32, 32)) + arrayVector[seg - 1];
+                        spriteSpeed[seg] = spriteSpeed[seg - 1];
+                        for (int j = 0; j < 10; j++)
+                        {
+                            turnPoints[seg, j] = turnPoints[(seg - 1), j];
+                            headSpeeds[seg, j] = headSpeeds[(seg - 1), j];
+                        }
+                        count[seg] = count[seg - 1];
 
-                    seg += 1;
-                    EAT.Play();
-                }
-                //otherwise make tail dead
-                else
-                {
-                    var tail = new List<Vector2>(arrayVector);
-                    tail.RemoveAt(0);
-                    tails.AddRange(tail);
-                    seg = 1;
-                    for (int i = 1; i < 10; i++)
-                    {
-                        arrayVector[i] = new Vector2(900, 700);
+                        seg += 1;
+                        EAT.Play();
                     }
-                    while (approxEquals(arrayVector[0], tails[tails.Count - 9]))
+                    //otherwise make tail dead
+                    else
                     {
-                        arrayVector[0] += spriteSpeed[0] * 2;
+                        var tail = new List<Vector2>(arrayVector);
+                        tail.RemoveAt(0);
+                        tails.AddRange(tail);
+                        seg = 1;
+                        for (int j = 1; j < 10; j++)
+                        {
+                            arrayVector[j] = new Vector2(900, 700);
+                        }
+                        while (approxEquals(arrayVector[0], tails[tails.Count - 9]))
+                        {
+                            arrayVector[0] += spriteSpeed[0] * 2;
+                        }
+                        Array.Clear(turnPoints, 0, 100);
+                        Array.Clear(headSpeeds, 0, 100);
+                        Array.Clear(spriteSpeed, 1, 9);
+                        Array.Clear(count, 0, 10);
+                        SHED.Play();
                     }
-                    Array.Clear(turnPoints, 0, 100);
-                    Array.Clear(headSpeeds, 0, 100);
-                    Array.Clear(spriteSpeed, 1, 9);
-                    Array.Clear(count, 0, 10);
-                    SHED.Play();
                 }
             }
 
@@ -300,7 +314,31 @@ namespace SnakeShed
                 }
 
             }
-           
+            //move pellets
+            for (int k = 0; k < pellets.Count; k++)
+            {
+                if (pellets[k].X < 0)
+                {
+                    lives -= 1;
+                    if (lives < 1)
+                    {
+                        Array.Clear(spriteSpeed, 0, 10);
+                        gameOver = true;
+                        if (!deadPlay)
+                        {
+                            DIE.Play();
+                            deadPlay = true;
+                        }
+                    }
+                    pellets[k] = new Vector2(900, 700);
+                }
+                else if (pellets[k] != new Vector2(900,700) && !gameOver)
+                {
+                    pellets[k] += new Vector2(-1, 0);
+                }
+
+                
+            }
 
         }
 
@@ -416,8 +454,10 @@ namespace SnakeShed
             {
                 spriteBatch.Draw(bodyTexture, arrayVector[i], null, Color.White, 0.0f, origin, 1.0f, SpriteEffects.None, 0.0f);
             }
-            spriteBatch.Draw(pelletTexture, pelletPos, null, Color.White, 0.0f, origin, 1.0f, SpriteEffects.None, 0.0f);
-
+            foreach (Vector2 pos in pellets) //draw all pellets
+            {
+                spriteBatch.Draw(pelletTexture, pos, null, Color.White, 0.0f, origin, 1.0f, SpriteEffects.None, 0.0f);
+            }
             //draw all dead tails
             foreach (Vector2 pos in tails)
             {
