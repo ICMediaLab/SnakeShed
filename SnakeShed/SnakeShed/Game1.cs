@@ -25,6 +25,7 @@ namespace SnakeShed
         Texture2D bodyTexture;
         Texture2D pelletTexture;
         Texture2D deadTexture;
+        Texture2D heartTexture;
         // Set the coordinates to draw the sprite at.
         Vector2[] arrayVector;
         Vector2[,] headSpeeds;
@@ -50,6 +51,7 @@ namespace SnakeShed
         SoundEffect EAT;
         SoundEffect DIE;
         SoundEffect SHED;
+        SoundEffect LIFE;
 
         public Game1()
         {
@@ -92,6 +94,7 @@ namespace SnakeShed
             deadPlay = false;
             EAT = Content.Load<SoundEffect>("SnakeEat");
             SHED = Content.Load<SoundEffect>("SnakeShed");
+            LIFE = Content.Load<SoundEffect>("LifeLost");
 
             //move all the body parts off screen at start
             for (int i = 0; i < 10; i++)
@@ -121,6 +124,7 @@ namespace SnakeShed
             bodyTexture = Content.Load<Texture2D>("SnakeBody");
             pelletTexture = Content.Load<Texture2D>("Pellet");
             deadTexture = Content.Load<Texture2D>("SnakeDead");
+            heartTexture = Content.Load<Texture2D>("Lives");
 
             //font
             Font1 = Content.Load<SpriteFont>("SpriteFont1");         
@@ -162,7 +166,7 @@ namespace SnakeShed
                     {
                         shedCollision = false;
                         System.Random RandNum = new System.Random();
-                        int x = 768;
+                        int x = 800;
                         int y = RandNum.Next(64, 436);
                         List<Vector2> body = new List<Vector2>(arrayVector);
                         var combined = body.Union(tails).Union(pellets).ToList();
@@ -317,7 +321,7 @@ namespace SnakeShed
             //move pellets
             for (int k = 0; k < pellets.Count; k++)
             {
-                if (pellets[k].X < 0)
+                if (pellets[k].X < 0) //if pellet has left screen, remove life
                 {
                     lives -= 1;
                     if (lives < 1)
@@ -330,11 +334,42 @@ namespace SnakeShed
                             deadPlay = true;
                         }
                     }
+                    else
+                    {
+                        LIFE.Play();
+                    }
                     pellets[k] = new Vector2(900, 700);
                 }
                 else if (pellets[k] != new Vector2(900,700) && !gameOver)
                 {
-                    pellets[k] += new Vector2(-1, 0);
+                    bool moved = false;
+                    foreach (Vector2 tail in tails) //moves around shed snakes
+                    {
+                        if (approxEquals(tail, pellets[k]) && moved == false)
+                        {
+                            if (pellets[k].Y == 0) //if at top of screen loop round
+                            {
+                                pellets[k] = new Vector2(pellets[k].X, graphics.GraphicsDevice.Viewport.Height - headTexture.Height + 32);
+                            }
+                            else
+                            {
+                                if (pellets[k].X % 4 == 0) //random ish move up or down
+                                {
+                                    pellets[k] -= new Vector2(0, 1);
+                                }
+                                else
+                                {
+                                    pellets[k] += new Vector2(0, 1);
+                                }
+                                
+                            }
+                            moved = true;
+                        }
+                    }
+                    if (!moved) //otherwise move left
+                    {
+                        pellets[k] += new Vector2(-1, 0);
+                    }
                 }
 
                 
@@ -462,6 +497,12 @@ namespace SnakeShed
             foreach (Vector2 pos in tails)
             {
                 spriteBatch.Draw(deadTexture, pos, null, Color.White, 0.0f, origin, 1.0f, SpriteEffects.None, 0.0f);
+            }
+
+            //draw lives
+            for (int i = 0; i < lives; i++)
+            {
+                spriteBatch.Draw(heartTexture, new Vector2(32 + (48 * i), 452), null, Color.White, 0.0f, origin, 1.0f, SpriteEffects.None, 0.0f);
             }
 
             // Draw score
